@@ -4,33 +4,53 @@ import datetime
 import json
 import re
 import requests
+import subprocess
 import time
 from bs4 import BeautifulSoup
 from parsedatetime import Calendar
 
-if __name__ == '__main__':
-    config = None
-    with open('config.json') as fh:
-        config = json.loads(fh.read())
+config = None
+with open('config.json') as fh:
+    config = json.loads(fh.read())
 
-    data = {
-        '__VIEWSTATE': config['viewstate'],
-        '__EVENTTARGET': 'ButtonSignIn',
-        '__VIEWSTATEENCRYPTED': '',
-        'ctl00$ctl00$PageContent$MainPageContent$textBoxEmailAddress': config['email'],
-        'ctl00$ctl00$PageContent$MainPageContent$textBoxPassword': config['password']
-        }
-
-    cookies = {
-        'LocalizationSettings': 'CurrentMyAirLocale=en-US',
-        'resmed-myair-country': 'resmed-myair-country=2',
-        'resmed-myair-instance': 'resmed-myair-instance=1'
+data = {
+    '__VIEWSTATE': config['viewstate'],
+    '__EVENTTARGET': 'ButtonSignIn',
+    "__VIEWSTATEGENERATOR": "CA0B0334",
+    '__VIEWSTATEENCRYPTED': '',
+    'ctl00$ctl00$PageContent$MainPageContent$textBoxEmailAddress': config['email'],
+    'ctl00$ctl00$PageContent$MainPageContent$textBoxPassword': config['password']
     }
-    url = 'https://myair.resmed.com/Default.aspx'
+
+cookies = {
+    'LocalizationSettings': 'CurrentMyAirLocale=en-US',
+    'resmed-myair-country': 'resmed-myair-country=2',
+    'resmed-myair-instance': 'resmed-myair-instance=1'
+}
+url = 'https://myair.resmed.com/Default.aspx'
+
+
+
+
+def get_page():
     result = requests.post(url, data=data, cookies=cookies)
     soup = BeautifulSoup(result.text, features="html.parser")
+    return soup
+
+
+def get_page2():
+    s = subprocess.Popen(open('mycurl').read(), shell=True, stdout=subprocess.PIPE)
+    soup = BeautifulSoup(s.stdout.read(), features="html.parser")
+    return soup
+
+
+if __name__ == '__main__':
+    
+
+
+    soup = get_page2()
     scripts = soup.find_all('script')
-    scores_script = scripts[6].text
+    scores_script = [x for x in scripts if 'myScores' in x.text][0].text
     matches = re.search('.+(\[.+?\]).+', scores_script).groups()[0]
     my_scores = json.loads(matches)
 
@@ -76,5 +96,7 @@ if __name__ == '__main__':
             exist_headers = {
                 'Authorization': 'Bearer {}'.format(config['exist_token'])
             }
+            print "posting data"
+            print data
             r = requests.post(
 exist_api + 'attributes/update/', headers=exist_headers, json=data)
