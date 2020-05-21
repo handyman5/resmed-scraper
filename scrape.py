@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import urllib3
+urllib3.disable_warnings()
+
 import datetime
 import json
 import re
@@ -50,7 +53,7 @@ if __name__ == '__main__':
 
     soup = get_page2()
     scripts = soup.find_all('script')
-    scores_script = [x for x in scripts if 'myScores' in x.text][0].text
+    scores_script = [x.renderContents() for x in scripts if 'myScores' in x.renderContents()][0]
     matches = re.search('.+(\[.+?\]).+', scores_script).groups()[0]
     my_scores = json.loads(matches)
 
@@ -96,7 +99,5 @@ if __name__ == '__main__':
             exist_headers = {
                 'Authorization': 'Bearer {}'.format(config['exist_token'])
             }
-            print "posting data"
-            print data
             r = requests.post(
 exist_api + 'attributes/update/', headers=exist_headers, json=data)
